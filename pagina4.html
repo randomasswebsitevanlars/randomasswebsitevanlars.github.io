@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App met Navigatie en Blackjack</title>
+    <!-- Laad Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Aangepaste CSS voor de "Inter" font en overgangseffecten (van Navigatie) */
+        body {
+            font-family: "Inter", sans-serif;
+            margin: 0;
+            /* Standaard padding voor mobiel: ruimte voor de zwevende hamburgertknop */
+            padding-top: 80px;
+            background-color: #1a1a1a; /* Donkere achtergrond voor de body */
+            color: #e0e0e0; /* Lichtgrijze tekst voor algemene content */
+            display: flex; /* Flex container voor main content op desktop */
+            flex-direction: column; /* Standaard kolom voor mobiel */
+            min-height: 100vh; /* Zorg ervoor dat de body minstens de volledige viewport hoogte is */
+            justify-content: center; /* Centreer inhoud verticaal in de body */
+            align-items: center; /* Centreer inhoud horizontaal in de body (vooral op mobiel) */
+        }
+
+        /* Vloeiende overgangen voor alle geanimeerde elementen */
+        .transition-all-500ms {
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* Extra styling voor de actieve link, als dat gewenst is */
+        .nav-link.active {
+            color: #4ade80; /* Groen voor de actieve link */
+            border-bottom: 2px solid #4ade80;
+        }
+
+        /* Styling voor de hoofdnavigatiebalk (dit is nu de zijbalk) */
+        #main-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: #1a1a1a; /* Donkere achtergrond voor de navigatie */
+            z-index: 50;
+            overflow-y: auto; /* Scrollen mogelijk als menu langer is dan scherm */
+            transition: width 0.5s ease-in-out, transform 0.5s ease-in-out;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5); /* Schaduw voor mobiel slide-out */
+
+            /* Standaard flex-kolom voor verticale weergave */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        /* Mobile-specifieke stijlen (tot 767px) */
+        @media (max-width: 767px) {
+            #main-nav {
+                width: 70%; /* Breedte van het mobiele zijmenu */
+                max-width: 300px;
+                transform: translateX(-100%); /* Standaard verborgen off-screen links */
+                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5); /* Schaduw wanneer het uitschuift */
+            }
+            #main-nav.open { /* Mobiele open status */
+                transform: translateX(0);
+            }
+            body.mobile-menu-open {
+                overflow: hidden; /* Voorkomt scrollen van de body wanneer mobiel menu open is */
+            }
+            /* Verberg de desktop-specifieke toggle knop op mobiel */
+            .desktop-nav-toggle-button {
+                display: none;
+            }
+        }
+
+        /* Desktop-specifieke stijlen (vanaf 768px) */
+        @media (min-width: 768px) {
+            body {
+                padding-left: 16rem; /* Ruimte voor de standaard (uitgeklapte) verticale navigatie */
+                padding-top: 0; /* Verwijder top padding voor desktop */
+                transition: padding-left 0.5s ease-in-out; /* Animatie voor padding-left */
+                flex-direction: row; /* Zorg dat main content naast de nav staat */
+                justify-content: center; /* Centreer main content horizontaal */
+                align-items: center; /* Centreer main content verticaal */
+            }
+            #main-nav {
+                width: 16rem; /* Standaard uitgeklapte breedte op desktop (w-64) */
+                transform: translateX(0); /* Altijd zichtbaar op desktop */
+                box-shadow: none; /* Geen schaduw nodig op desktop */
+            }
+
+            /* Ingeklapte status voor desktop navigatie */
+            #main-nav.collapsed {
+                width: 5rem; /* Ingeklapte breedte (bijv. 80px) */
+            }
+            body.nav-collapsed { /* Pas de body padding aan wanneer nav is ingeklapt */
+                padding-left: 5rem;
+            }
+
+            /* Verberg tekst in ingeklapte navigatie op desktop */
+            #main-nav.collapsed .nav-text {
+                opacity: 0;
+                width: 0; /* Klap horizontale ruimte voor tekst in */
+                overflow: hidden;
+                transition: opacity 0.3s ease-in-out, width 0.3s ease-in-out;
+                white-space: nowrap; /* Voorkom tekstterugloop */
+            }
+            #main-nav:not(.collapsed) .nav-text { /* Toon tekst wanneer niet ingeklapt */
+                opacity: 1;
+                width: auto;
+            }
+
+            /* Pas padding aan voor links wanneer ingeklapt om iconen uit te lijnen */
+            #main-nav.collapsed .nav-link {
+                justify-content: center; /* Centreer iconen */
+                padding: 0.75rem 0.5rem; /* Kleinere padding */
+            }
+        }
+
+        /* ----- START Blackjack Game CSS (geïntegreerd) ----- */
+        .game-container {
+            background-color: #2a2a2a; /* Donkerdere achtergrond voor de spelcontainer */
+            border-radius: 1rem; /* Afgeronde hoeken */
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5); /* Zachte schaduw */
+            padding: 2.5rem; /* Ruime padding binnenin */
+            max-width: 600px; /* Maximale breedte van het spel */
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Ruimte tussen secties */
+            /* margin: 20px auto;  Removed, handled by body flex properties */
+        }
+
+        .hand-section {
+            background-color: #3a3a3a; /* Iets lichtere achtergrond voor handsecties */
+            border-radius: 0.75rem; /* Afgeronde hoeken */
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .cards-display {
+            display: flex;
+            flex-wrap: wrap; /* Zorg ervoor dat kaarten naar de volgende regel gaan als er te veel zijn */
+            gap: 0.75rem; /* Ruimte tussen kaarten */
+            justify-content: center;
+            min-height: 80px; /* Minimale hoogte zodat de lay-out niet verspringt */
+        }
+
+        .card {
+            background-color: #fefefe; /* Witte achtergrond voor kaarten */
+            color: #2a2a2a; /* Donkere tekst op kaarten */
+            border-radius: 0.5rem; /* Afgeronde hoeken voor kaarten */
+            padding: 0.75rem 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            min-width: 60px; /* Vaste breedte voor kaarten */
+            height: 90px; /* Vaste hoogte voor kaarten */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Behoud space-between voor buitenste elementen (rank/suit) */
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Schaduw voor kaarten */
+            position: relative; /* Nodig voor absolute positionering van front/back */
+            transform-style: preserve-3d; /* Nodig voor 3D flip animatie */
+        }
+
+        /* Common styles for front and back faces */
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden; /* Hide the back of a rotating element */
+            transition: transform 0.5s ease; /* Smooth transition for the flip */
+            border-radius: 0.5rem; /* Inherit border-radius from parent */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Centreer inhoud verticaal */
+            align-items: center;
+            padding: 0.75rem 1rem; /* Inherit padding */
+            font-size: 1.5rem; /* Inherit font-size */
+            font-weight: bold; /* Inherit font-weight */
+        }
+
+        /* Default: front is visible */
+        .card-front {
+            transform: rotateY(0deg);
+            background-color: #fefefe; /* Witte achtergrond voor voorkant */
+            color: #2a2a2a; /* Donkere tekst op voorkant */
+        }
+
+        /* Default: back is rotated away (hidden) */
+        .card-back {
+            transform: rotateY(180deg); /* Rotated 180deg to show its back when card is face-down */
+            background-color: #4ade80; /* Groene achterkant */
+            color: #2a2a2a;
+            font-size: 2.5rem; /* Grotere font voor joker op achterkant */
+        }
+
+        /* When the card needs to be face-down, apply this class to the .card container */
+        .card.face-down .card-front {
+            transform: rotateY(-180deg); /* Flip front away */
+        }
+        .card.face-down .card-back {
+            transform: rotateY(0deg); /* Bring back to front */
+        }
+
+
+        .card-rank {
+            font-size: 1.25rem;
+        }
+
+        .card-suit {
+            font-size: 1.75rem;
+            line-height: 1; /* Voorkom extra witruimte */
+        }
+
+
+        .game-message {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap; /* Voor responsiviteit */
+        }
+
+        .game-button {
+            background-color: #4ade80; /* Groene knoppen */
+            color: #1a1a1a;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: none;
+        }
+
+        .game-button:hover {
+            background-color: #36c268; /* Donkerder groen bij hover */
+            transform: translateY(-2px); /* Lichte opwaartse beweging */
+        }
+
+        .game-button:active {
+            background-color: #2e9f55; /* Nog donkerder groen bij klik */
+            transform: translateY(0);
+        }
+
+        .game-button:disabled {
+            background-color: #6b7280; /* Grijze knoppen als ze uitgeschakeld zijn */
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Animatie voor nieuwe kaarten die worden gedeeld */
+        @keyframes dealCardEnter {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .card.new-card-deal {
+            animation: dealCardEnter 0.5s ease-out forwards; /* forwards om eindstaat te behouden */
+        }
+        /* ----- EINDE Blackjack Game CSS ----- */
+    </style>
+</head>
+<body>
+
+     <!-- Navigatiebalk container - Dit is de primaire, verticale zijbalk -->
+    <nav id="main-nav" class="bg-gray-800">
+        <!-- Header sectie van de nav (logo en desktop toggle knop) -->
+        <div class="px-4 py-3 md:py-6 flex items-center justify-between md:flex-col md:items-start md:space-y-4 w-full">
+            <!-- Logo of merknaam (nu een huisje) -->
+            <!-- START Verandering: Huis-icoon en tekst "Start" -->
+            <a href="index.html" class="flex items-center space-x-2 text-2xl font-bold text-white transition-all-500ms hover:text-gray-300 md:self-start">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11l2 2m-2 2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="nav-text">Start</span>
+            </a>
+            <!-- EINDE Verandering: Huis-icoon en tekst "Start" -->
+            <!-- Desktop navigatie toggle knop -->
+            <button id="desktop-nav-toggle-button"
+                    class="desktop-nav-toggle-button md:block hidden text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400 rounded-md p-2 transition-all-500ms self-end md:mt-4">
+                <!-- Icoon verandert met JS -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path id="desktop-nav-toggle-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Navigatie Links (altijd verticaal) -->
+        <div class="flex flex-col px-4 py-2 md:flex-grow w-full">
+            <a href="pagina1.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2 2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="nav-text">Pagina 1</span>
+            </a>
+            <a href="pagina2.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="nav-text">pagina 2</span>
+            </a>
+            <a href="pagina3.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-1.289-8.455-3.245L1.655 9.467A20.041 20.041 0 012.5 6C5 3.5 9 2 12 2s7 1.5 9.5 4c.845 2.115 1.258 4.394 1.29 6.702l-1.29 1.553z"></path></svg>
+                <span class="nav-text">pagina 3</span>
+            </a>
+            <a href="pagina4.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-9 13V3"></path></svg>
+                <span class="nav-text">blackjack</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hamburger knop (vast bovenaan rechts voor mobiel) -->
+    <div class="mobile-menu-button-container fixed top-0 right-0 p-4 md:hidden z-50">
+        <button id="mobile-menu-button" class="text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400 rounded-md p-2 transition-all-500ms">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Hoofdinhoud van de pagina, inclusief het Blackjack spel -->
+    <main class="container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] md:min-h-screen">
+        <!-- Blackjack Spel Container -->
+        <div class="game-container">
+            <h1 class="text-3xl font-bold mb-4 text-green-400">Blackjack</h1>
+
+            <!-- Dealer's Hand -->
+            <div class="hand-section">
+                <h2 class="text-xl font-semibold">Dealer's Hand: <span id="dealer-score">0</span></h2>
+                <div id="dealer-cards" class="cards-display">
+                    <!-- Dealer kaarten komen hier -->
+                </div>
+            </div>
+
+            <!-- Player's Hand -->
+            <div class="hand-section">
+                <h2 class="text-xl font-semibold">Jouw Hand: <span id="player-score">0</span></h2>
+                <div id="player-cards" class="cards-display">
+                    <!-- Speler kaarten komen hier -->
+                </div>
+            </div>
+
+            <!-- Spelberichten -->
+            <p id="game-message" class="game-message text-yellow-300"></p>
+
+            <!-- Knoppen voor acties -->
+            <div class="button-group">
+                <button id="hit-button" class="game-button">Hit</button>
+                <button id="stand-button" class="game-button">Stand</button>
+                <button id="new-game-button" class="game-button">Nieuw Spel</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ----- START Navigatie JavaScript -----
+        // JavaScript voor het togglen van het mobiele menu
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mainNav = document.getElementById('main-nav');
+        const body = document.body;
+
+        mobileMenuButton.addEventListener('click', () => {
+            mainNav.classList.toggle('open');
+            body.classList.toggle('mobile-menu-open');
+        });
+
+        // JavaScript voor het togglen van de desktop navigatie
+        const desktopNavToggleButton = document.getElementById('desktop-nav-toggle-button');
+        const desktopNavToggleIcon = document.getElementById('desktop-nav-toggle-icon');
+
+        desktopNavToggleButton.addEventListener('click', () => {
+            mainNav.classList.toggle('collapsed');
+            body.classList.toggle('nav-collapsed');
+
+            // Verander het icoon van de toggle knop
+            if (mainNav.classList.contains('collapsed')) {
+                desktopNavToggleIcon.setAttribute('d', 'M13 5l7 7-7 7M6 5l7 7-7 7'); // Pijlen naar rechts (uitgeklapt)
+            } else {
+                desktopNavToggleIcon.setAttribute('d', 'M11 19l-7-7 7-7m8 14l-7-7 7-7'); // Pijlen naar links (ingeklapt)
+            }
+        });
+
+        // Sluit mobiel menu wanneer een link wordt geklikt (alleen op mobiel)
+        mainNav.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (mainNav.classList.contains('open') && window.innerWidth < 768) {
+                    mainNav.classList.remove('open');
+                    body.classList.remove('mobile-menu-open');
+                }
+            });
+        });
+
+        // ----- EINDE Navigatie JavaScript -----
+
+
+        // ----- START Blackjack Game JavaScript (geïntegreerd) -----
+        // DOM elementen
+        const dealerCardsDiv = document.getElementById('dealer-cards');
+        const playerCardsDiv = document.getElementById('player-cards');
+        const dealerScoreSpan = document.getElementById('dealer-score');
+        const playerScoreSpan = document.getElementById('player-score');
+        const gameMessageParagraph = document.getElementById('game-message');
+        const hitButton = document.getElementById('hit-button');
+        const standButton = document.getElementById('stand-button');
+        const newGameButton = document.getElementById('new-game-button');
+
+        // Spelvariabelen
+        let deck = [];
+        let playerCards = [];
+        let dealerCards = [];
+        let playerScore = 0;
+        let dealerScore = 0;
+        let gameOver = false;
+        let dealerHiddenCardElement = null; // Referentie naar de verborgen kaart van de dealer
+
+        // Kaart eigenschappen
+        const suits = ['♠️', '♥️', '♦️', '♣️']; // Schoppen, Harten, Ruiten, Klaveren
+        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        /**
+         * Maakt een standaard dek van 52 speelkaarten.
+         * @returns {Array<Object>} Een array van kaartobjecten.
+         */
+        function createDeck() {
+            const newDeck = [];
+            for (const suit of suits) {
+                for (const rank of ranks) {
+                    newDeck.push({ rank, suit });
+                }
+            }
+            return newDeck;
+        }
+
+        /**
+         * Schudt het dek van kaarten willekeurig.
+         * @param {Array<Object>} deck - Het dek om te schudden.
+         * @returns {Array<Object>} Het geschudde dek.
+         */
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]]; // Wissel elementen
+            }
+            return deck;
+        }
+
+        /**
+         * Berekent de waarde van een hand. Azen zijn flexibel (1 of 11).
+         * @param {Array<Object>} hand - De hand van kaarten.
+         * @returns {number} De totale score van de hand.
+         */
+        function calculateScore(hand) {
+            let score = 0;
+            let numAces = 0;
+
+            for (const card of hand) {
+                if (card.rank === 'A') {
+                    numAces++;
+                    score += 11;
+                } else if (['K', 'Q', 'J'].includes(card.rank)) {
+                    score += 10;
+                } else {
+                    score += parseInt(card.rank);
+                }
+            }
+
+            // Pas Azen aan van 11 naar 1 indien nodig om niet "bust" te gaan
+            while (score > 21 && numAces > 0) {
+                score -= 10;
+                numAces--;
+            }
+            return score;
+        }
+
+        /**
+         * Maakt en geeft een HTML-element voor een kaart weer.
+         * @param {Object} card - Het kaartobject ({ rank, suit }).
+         * @param {boolean} isHidden - Of de kaart verborgen moet worden (achterkant).
+         * @param {boolean} animateEntry - Of de 'dealCardEnter' animatie toegepast moet worden.
+         * @returns {HTMLElement} Het HTML-element van de kaart.
+         */
+        function createCardElement(card, isHidden = false, animateEntry = false) {
+            const cardDiv = document.createElement('div');
+            cardDiv.classList.add('card');
+
+            // Maak de voorkant van de kaart
+            const cardFront = document.createElement('div');
+            cardFront.classList.add('card-front');
+            cardFront.innerHTML = `<div class="card-rank">${card.rank}</div><div class="card-suit">${card.suit}</div>`;
+            if (card.suit === '♥️' || card.suit === '♦️') {
+                cardFront.style.color = '#dc2626'; // Rode kleur (Tailwind red-600)
+            }
+            cardDiv.appendChild(cardFront);
+
+            // Maak de achterkant van de kaart
+            const cardBack = document.createElement('div');
+            cardBack.classList.add('card-back');
+            cardBack.innerHTML = '<span>🃏</span>';
+            cardDiv.appendChild(cardBack);
+
+            if (isHidden) {
+                cardDiv.classList.add('face-down'); // Zorg ervoor dat de kaart "face-down" start
+            }
+
+            if (animateEntry) {
+                cardDiv.classList.add('new-card-deal');
+            }
+            return cardDiv;
+        }
+
+        /**
+         * Update de UI om de scores en knopstatussen bij te werken.
+         * @param {boolean} showDealerFullScore - Of de volledige score van de dealer getoond moet worden.
+         */
+        function updateScoresAndButtons(showDealerFullScore = false) {
+            playerScoreSpan.textContent = calculateScore(playerCards);
+            if (showDealerFullScore) {
+                dealerScoreSpan.textContent = calculateScore(dealerCards);
+            } else {
+                // Toon alleen de eerste kaart score als de tweede verborgen is (indien aanwezig)
+                dealerScoreSpan.textContent = dealerCards.length > 0 ? calculateScore([dealerCards[0]]) : '0';
+            }
+            updateButtonsState();
+        }
+
+        /**
+         * Helper functie om de staat van de knoppen bij te werken.
+         */
+        function updateButtonsState() {
+            if (gameOver) {
+                hitButton.disabled = true;
+                standButton.disabled = true;
+                newGameButton.disabled = false;
+            } else {
+                hitButton.disabled = false;
+                standButton.disabled = false;
+                newGameButton.disabled = true;
+            }
+        }
+
+        /**
+         * Deelt een kaart uit het dek en voegt deze met animatie toe aan de UI.
+         * @param {Array<Object>} targetHand - De hand waaraan de kaart wordt toegevoegd.
+         * @param {HTMLElement} targetDiv - De div waarin de kaart wordt weergegeven.
+         * @param {boolean} isHidden - Of de kaart verborgen moet zijn.
+         * @returns {Promise<HTMLElement>} Een Promise die resolveert met het toegevoegde kaart element.
+         */
+        async function dealCardAnimated(targetHand, targetDiv, isHidden = false) {
+            const card = deck.pop();
+            targetHand.push(card);
+            const cardElement = createCardElement(card, isHidden, true); // `true` om entry animatie te activeren
+            targetDiv.appendChild(cardElement);
+
+            if (isHidden) {
+                // Bewaar een referentie naar deze specifieke verborgen kaart als het de dealer's tweede kaart is
+                dealerHiddenCardElement = cardElement;
+            }
+
+            // Wacht op de entry animatie
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return cardElement;
+        }
+
+        /**
+         * Flipt de verborgen kaart van de dealer om deze te onthullen.
+         */
+        async function flipDealerCard() {
+            if (dealerHiddenCardElement) {
+                dealerHiddenCardElement.classList.remove('face-down'); // Verwijder de 'face-down' klasse om te flippen
+                await new Promise(resolve => setTimeout(resolve, 500)); // Wacht tot flip animatie voorbij is
+                dealerHiddenCardElement = null; // Reset de referentie
+            }
+        }
+
+        /**
+         * Start een nieuw Blackjack spel.
+         */
+        async function startGame() {
+            deck = shuffleDeck(createDeck());
+            playerCards = [];
+            dealerCards = [];
+            gameOver = false;
+            dealerHiddenCardElement = null; // Reset referentie
+
+            gameMessageParagraph.textContent = 'Deel kaarten...';
+
+            // Leeg de kaartenweergaves en update scores naar 0
+            playerCardsDiv.innerHTML = '';
+            dealerCardsDiv.innerHTML = '';
+            playerScoreSpan.textContent = '0';
+            dealerScoreSpan.textContent = '0';
+
+            // Schakel alle knoppen uit tijdens het delen van kaarten
+            hitButton.disabled = true;
+            standButton.disabled = true;
+            newGameButton.disabled = true;
+
+            // Deel kaarten met animatie en kleine pauzes
+            // Speler kaart 1
+            await dealCardAnimated(playerCards, playerCardsDiv, false);
+            updateScoresAndButtons(false);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Dealer kaart 1 (zichtbaar)
+            await dealCardAnimated(dealerCards, dealerCardsDiv, false);
+            updateScoresAndButtons(false);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Speler kaart 2
+            await dealCardAnimated(playerCards, playerCardsDiv, false);
+            updateScoresAndButtons(false);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Dealer kaart 2 (verborgen)
+            await dealCardAnimated(dealerCards, dealerCardsDiv, true);
+            updateScoresAndButtons(false); // Score update verandert niet visueel omdat tweede kaart verborgen is
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Bereken scores voor game-over checks
+            playerScore = calculateScore(playerCards);
+            dealerScore = calculateScore(dealerCards); // Dit is de echte score van de dealer
+
+            // Controleer voor directe game over condities
+            if (playerScore === 21) { // Directe Blackjack voor speler
+                gameOver = true;
+                await flipDealerCard(); // Onthul dealer's kaart
+                if (dealerScore === 21) {
+                    gameMessageParagraph.textContent = 'Gelijkspel! Beiden hebben Blackjack.';
+                } else {
+                    gameMessageParagraph.textContent = 'Blackjack! Jij wint!';
+                }
+                updateScoresAndButtons(true); // Toon dealer's volledige score
+            } else if (playerScore > 21) { // Directe bust voor speler (zeer zeldzaam op 2 kaarten)
+                gameOver = true;
+                await flipDealerCard(); // Onthul dealer's kaart
+                gameMessageParagraph.textContent = 'Je hebt over 21! Helaas!'; // Expliciete melding
+                updateScoresAndButtons(true); // Toon dealer's volledige score
+            } else {
+                gameMessageParagraph.textContent = 'Maak je zet!';
+            }
+            updateButtonsState(); // Update knoppen status na initiële deal en checks
+        }
+
+        /**
+         * De speler vraagt om een extra kaart.
+         */
+        async function hit() {
+            if (gameOver) return;
+
+            hitButton.disabled = true; // Schakel knoppen uit tijdens hit
+            standButton.disabled = true;
+
+            await dealCardAnimated(playerCards, playerCardsDiv, false);
+            playerScore = calculateScore(playerCards);
+            updateScoresAndButtons(false);
+
+            if (playerScore > 21) {
+                gameMessageParagraph.textContent = 'Je hebt over 21! Helaas!'; // Expliciete melding
+                gameOver = true;
+                await flipDealerCard(); // Onthul dealer's kaart
+                updateScoresAndButtons(true);
+            }
+            updateButtonsState(); // Update knoppen state na hit
+        }
+
+        /**
+         * De speler stopt met kaarten vragen. De dealer speelt.
+         */
+        async function stand() {
+            if (gameOver) return;
+
+            gameOver = true;
+            // Knoppen direct updaten om speleracties te blokkeren terwijl dealer speelt
+            updateButtonsState();
+            gameMessageParagraph.textContent = 'Dealer speelt...';
+
+            await flipDealerCard(); // Onthul de verborgen kaart van de dealer
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Korte pauze na onthulling
+
+            // Update dealerScore hier expliciet voordat de lus begint
+            dealerScore = calculateScore(dealerCards);
+            updateScoresAndButtons(true); // Update score van dealer na onthulling
+
+            // Dealer trekt kaarten totdat score 17 of hoger is
+            while (dealerScore < 17) { // Gebruik de bijgewerkte dealerScore
+                console.log(`Dealer's score before hitting: ${dealerScore}, trekt een nieuwe kaart.`); // Debug log
+                gameMessageParagraph.textContent = 'Dealer trekt een kaart...';
+                await dealCardAnimated(dealerCards, dealerCardsDiv, false);
+                dealerScore = calculateScore(dealerCards); // Update dealerScore na het trekken van een kaart
+                updateScoresAndButtons(true);
+                await new Promise(resolve => setTimeout(resolve, 700)); // Pauze tussen dealer kaarten
+            }
+            console.log(`Dealer stopt met score ${dealerScore}.`); // Debug log
+
+            determineWinner();
+            updateButtonsState(); // Update knoppen state nadat dealer speelt en winnaar is bepaald
+        }
+
+        /**
+         * Bepaalt de winnaar van het spel.
+         */
+        function determineWinner() {
+            console.log(`Speler score: ${playerScore}, Dealer score: ${dealerScore}`); // Debug log voor einde spel
+            if (playerScore > 21) {
+                gameMessageParagraph.textContent = 'dealer wint';
+            } else if (dealerScore > 21) {
+                gameMessageParagraph.textContent = 'jij wint'; // Expliciete melding
+            } else if (playerScore > dealerScore) {
+                gameMessageParagraph.textContent = 'jij wint';
+            } else if (dealerScore > playerScore) {
+                gameMessageParagraph.textContent = 'dealer wint';
+            } else {
+                gameMessageParagraph.textContent = 'push';
+            }
+        }
+
+        // Event Listeners voor de knoppen
+        hitButton.addEventListener('click', hit);
+        standButton.addEventListener('click', stand);
+        newGameButton.addEventListener('click', startGame);
+
+        // Start het spel wanneer de pagina geladen is
+        window.onload = startGame;
+        // ----- EINDE Blackjack Game JavaScript -----
+    </script>
+</body>
+</html>

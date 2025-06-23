@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uitschuifbare Verticale Navigatiebalk</title>
+    <!-- Laad Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Aangepaste CSS voor de "Inter" font en overgangseffecten */
+        body {
+            font-family: "Inter", sans-serif;
+            margin: 0;
+            /* Standaard padding voor mobiel: ruimte voor de zwevende hamburgertknop */
+            padding-top: 80px;
+            background-color: #1a1a1a; /* Donkere achtergrond voor de body */
+        }
+
+        /* Vloeiende overgangen voor alle geanimeerde elementen */
+        .transition-all-500ms {
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* Extra styling voor de actieve link, als dat gewenst is */
+        .nav-link.active {
+            color: #4ade80; /* Groen voor de actieve link */
+            border-bottom: 2px solid #4ade80;
+        }
+
+        /* Styling voor de hoofdnavigatiebalk (dit is nu de zijbalk) */
+        #main-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: #1a1a1a; /* Donkere achtergrond voor de navigatie */
+            z-index: 50;
+            overflow-y: auto; /* Scrollen mogelijk als menu langer is dan scherm */
+            transition: width 0.5s ease-in-out, transform 0.5s ease-in-out;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5); /* Schaduw voor mobiel slide-out */
+
+            /* Standaard flex-kolom voor verticale weergave */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        /* Mobile-specifieke stijlen (tot 767px) */
+        @media (max-width: 767px) {
+            #main-nav {
+                width: 70%; /* Breedte van het mobiele zijmenu */
+                max-width: 300px;
+                transform: translateX(-100%); /* Standaard verborgen off-screen links */
+                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5); /* Schaduw wanneer het uitschuift */
+            }
+            #main-nav.open { /* Mobiele open status */
+                transform: translateX(0);
+            }
+            body.mobile-menu-open {
+                overflow: hidden; /* Voorkomt scrollen van de body wanneer mobiel menu open is */
+            }
+            /* Verberg de desktop-specifieke toggle knop op mobiel */
+            .desktop-nav-toggle-button {
+                display: none;
+            }
+        }
+
+        /* Desktop-specifieke stijlen (vanaf 768px) */
+        @media (min-width: 768px) {
+            body {
+                padding-left: 16rem; /* Ruimte voor de standaard (uitgeklapte) verticale navigatie */
+                padding-top: 0; /* Verwijder top padding voor desktop */
+                transition: padding-left 0.5s ease-in-out; /* Animatie voor padding-left */
+            }
+            #main-nav {
+                width: 16rem; /* Standaard uitgeklapte breedte op desktop (w-64) */
+                transform: translateX(0); /* Altijd zichtbaar op desktop */
+                box-shadow: none; /* Geen schaduw nodig op desktop */
+            }
+
+            /* Ingeklapte status voor desktop navigatie */
+            #main-nav.collapsed {
+                width: 5rem; /* Ingeklapte breedte (bijv. 80px) */
+            }
+            body.nav-collapsed { /* Pas de body padding aan wanneer nav is ingeklapt */
+                padding-left: 5rem;
+            }
+
+            /* Verberg tekst in ingeklapte navigatie op desktop */
+            #main-nav.collapsed .nav-text {
+                opacity: 0;
+                width: 0; /* Klap horizontale ruimte voor tekst in */
+                overflow: hidden;
+                transition: opacity 0.3s ease-in-out, width 0.3s ease-in-out;
+                white-space: nowrap; /* Voorkom tekstterugloop */
+            }
+            #main-nav:not(.collapsed) .nav-text { /* Toon tekst wanneer niet ingeklapt */
+                opacity: 1;
+                width: auto;
+            }
+
+            /* Pas padding aan voor links wanneer ingeklapt om iconen uit te lijnen */
+            #main-nav.collapsed .nav-link {
+                justify-content: center; /* Centreer iconen */
+                padding: 0.75rem 0.5rem; /* Kleinere padding */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+
+    <!-- Navigatiebalk container - Dit is nu de primaire, verticale zijbalk -->
+    <nav id="main-nav" class="bg-gray-800">
+        <!-- Header sectie van de nav (logo en desktop toggle knop) -->
+        <div class="px-4 py-3 md:py-6 flex items-center justify-between md:flex-col md:items-start md:space-y-4 w-full">
+            <!-- Logo of merknaam -->
+            <a href="index.html" class="flex items-center space-x-2 text-2xl font-bold text-white transition-all-500ms hover:text-gray-300 md:self-start">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4ZM12 6V18M18 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="nav-text">navigatie</span>
+            </a>
+
+            <!-- Desktop navigatie toggle knop -->
+            <button id="desktop-nav-toggle-button"
+                    class="desktop-nav-toggle-button md:block hidden text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400 rounded-md p-2 transition-all-500ms self-end md:mt-4">
+                <!-- Icoon verandert met JS -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path id="desktop-nav-toggle-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Navigatie Links (altijd verticaal) -->
+        <div class="flex flex-col px-4 py-2 md:flex-grow w-full">
+            <a href="pagina1.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2 2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="nav-text">pagina1</span>
+            </a>
+            <a href="pagina2.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="nav-text">pagina2</span>
+            </a>
+            <a href="pagina3.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-1.289-8.455-3.245L1.655 9.467A20.041 20.041 0 012.5 6C5 3.5 9 2 12 2s7 1.5 9.5 4c.845 2.115 1.258 4.394 1.29 6.702l-1.29 1.553z"></path></svg>
+                <span class="nav-text">pagina3</span>
+            </a>
+            <a href="pagina4.html" class="nav-link flex items-center space-x-3 text-gray-300 hover:text-green-400 py-2 border-b-2 border-transparent hover:border-green-400 transition-all-500ms rounded-md mx-0 my-1">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-9 13V3"></path></svg>
+                <span class="nav-text">pagina4</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hamburger knop (vast bovenaan rechts voor mobiel) -->
+    <div class="mobile-menu-button-container fixed top-0 right-0 p-4 md:hidden z-50">
+        <button id="mobile-menu-button" class="text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400 rounded-md p-2 transition-all-500ms">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Voorbeeld content -->
+    <main class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-white mb-6">pagina1</h1>
+        <p class="text-gray-300 leading-relaxed">
+            De navigatiebalk is nu verticaal aan de linkerkant en uitschuifbaar voor desktopweergave.
+            Op mobiele apparaten schuift een zijmenu van links naar binnen wanneer je op het hamburgerticoon klikt.
+            Alle animaties duren nog steeds 0.5 seconden voor een vloeiende ervaring.
+        </p>
+
+        <!-- Sectie voor Gemini API LLM-gebaseerd inzicht -->
+        <div class="bg-gray-700 p-6 rounded-lg mt-8 shadow-md transition-all-500ms">
+            <h2 class="text-2xl font-semibold text-green-400 mb-4">Dagelijks Inzicht</h2>
+            <p id="insight-text" class="text-gray-300 leading-relaxed mb-4">
+                Klik op de knop hieronder om een nieuw inzicht te genereren.
+            </p>
+            <button id="generate-insight-button"
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md shadow-lg
+                           focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75
+                           transition-all-500ms flex items-center justify-center">
+                <span id="button-text">Genereer Inzicht ✨</span>
+                <span id="loading-spinner" class="hidden ml-2">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+            </button>
+        </div>
+
+        <div class="bg-gray-700 p-6 rounded-lg mt-8 shadow-md">
+            <h2 class="text-2xl font-semibold text-green-400 mb-4">Meer Informatie</h2>
+            <p class="text-gray-300 leading-relaxed">
+                We zijn toegewijd aan het leveren van de beste service en producten.
+                Ons team staat altijd klaar om u te helpen met al uw vragen en behoeften.
+                Aarzel niet om contact met ons op te nemen voor meer details over onze aanbiedingen.
+            </p>
+        </div>
+        <div class="h-96 bg-gray-800 rounded-lg mt-8 flex items-center justify-center">
+            <p class="text-gray-500 text-lg">Meer content hier...</p>
+        </div>
+        <div class="h-96 bg-gray-700 rounded-lg mt-8 flex items-center justify-center">
+            <p class="text-gray-500 text-lg">Zodat je kunt scrollen...</p>
+        </div>
+        <div class="h-96 bg-gray-800 rounded-lg mt-8 flex items-center justify-center">
+            <p class="text-gray-500 text-lg">En de vaste navigatiebalk zien.</p>
+        </div>
+    </main>
+
+    <script>
+        // JavaScript voor het togglen van het mobiele menu
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mainNav = document.getElementById('main-nav');
+        const body = document.body;
+
+        mobileMenuButton.addEventListener('click', () => {
+            mainNav.classList.toggle('open');
+            body.classList.toggle('mobile-menu-open');
+        });
+
+        // JavaScript voor het togglen van de desktop navigatie
+        const desktopNavToggleButton = document.getElementById('desktop-nav-toggle-button');
+        const desktopNavToggleIcon = document.getElementById('desktop-nav-toggle-icon');
+
+        desktopNavToggleButton.addEventListener('click', () => {
+            mainNav.classList.toggle('collapsed');
+            body.classList.toggle('nav-collapsed');
+
+            // Verander het icoon van de toggle knop
+            if (mainNav.classList.contains('collapsed')) {
+                desktopNavToggleIcon.setAttribute('d', 'M13 5l7 7-7 7M6 5l7 7-7 7'); // Pijlen naar rechts (uitgeklapt)
+            } else {
+                desktopNavToggleIcon.setAttribute('d', 'M11 19l-7-7 7-7m8 14l-7-7 7-7'); // Pijlen naar links (ingeklapt)
+            }
+        });
+
+
+        // Sluit mobiel menu wanneer een link wordt geklikt (alleen op mobiel)
+        mainNav.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (mainNav.classList.contains('open') && window.innerWidth < 768) {
+                    mainNav.classList.remove('open');
+                    body.classList.remove('mobile-menu-open');
+                }
+            });
+        });
+
+        // JavaScript voor de Gemini API integratie
+        const generateInsightButton = document.getElementById('generate-insight-button');
+        const insightText = document.getElementById('insight-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const buttonText = document.getElementById('button-text');
+
+        generateInsightButton.addEventListener('click', async () => {
+            insightText.textContent = '';
+            buttonText.textContent = 'Genereren...';
+            loadingSpinner.classList.remove('hidden');
+            generateInsightButton.disabled = true;
+
+            try {
+                let chatHistory = [];
+                const prompt = "Genereer een kort, inspirerend of interessant inzicht voor de dag. Begin direct met het inzicht, zonder introductie.";
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    insightText.textContent = text;
+                } else {
+                    insightText.textContent = 'Er is een fout opgetreden bij het genereren van het inzicht. Probeer het opnieuw.';
+                    console.error('Onverwachte API-responsstructuur:', result);
+                }
+            } catch (error) {
+                insightText.textContent = 'Er is een netwerkfout opgetreden. Controleer uw internetverbinding.';
+                console.error('Fout bij het aanroepen van Gemini API:', error);
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                buttonText.textContent = 'Genereer Inzicht ✨';
+                generateInsightButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
